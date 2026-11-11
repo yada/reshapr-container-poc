@@ -1,6 +1,6 @@
 # reshapr-container-poc
 
-Proof of concept: run the **[reShapr](https://github.com/reshaprio/reshapr) MCP gateway stack on [apple/container](https://github.com/apple/container)** (Linux containers as lightweight VMs on macOS), without Docker or Compose.
+Proof of concept: run the **[reShapr](https://github.com/reshaprio/reshapr) MCP runtime stack on [apple/container](https://github.com/apple/container)** (Linux containers as lightweight VMs on macOS), without Docker or Compose.
 
 `reshapr run` only knows `docker` / `podman` + `compose`. apple/container has no compose, restart policy, healthcheck or `host-gateway`, so this repo provides a script equivalent and records what works and what does not. Results: [docs/FINDINGS.md](docs/FINDINGS.md).
 

@@ -1,0 +1,101 @@
+# Minimal reShapr stack for `container cluster` (T7): postgres, control plane, 2 gateways clustered
+# through JGroups DNS_PING on the headless Service "reshapr-gateways" (same as docker-compose-cluster.yml).
+apiVersion: v1
+kind: Namespace
+metadata: {name: reshapr}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: postgres, namespace: reshapr}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: postgres}}
+  template:
+    metadata: {labels: {app: postgres}}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - {name: POSTGRES_USER, value: reshapr}
+            - {name: POSTGRES_PASSWORD, value: reshapr}
+            - {name: POSTGRES_DB, value: reshapr}
+          ports: [{containerPort: 5432}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: postgres, namespace: reshapr}
+spec:
+  selector: {app: postgres}
+  ports: [{port: 5432}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: control-plane, namespace: reshapr}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: control-plane}}
+  template:
+    metadata: {labels: {app: control-plane}}
+    spec:
+      containers:
+        - name: ctrl
+          image: registry.reshapr.io/reshapr/reshapr-ctrl:1.1.0
+          env:
+            - {name: QUARKUS_DATASOURCE_JDBC_URL, value: "jdbc:postgresql://postgres:5432/reshapr"}
+            - {name: QUARKUS_DATASOURCE_USERNAME, value: reshapr}
+            - {name: QUARKUS_DATASOURCE_PASSWORD, value: reshapr}
+            - {name: RESHAPR_ADMIN_NAME, value: admin}
+            - {name: RESHAPR_ADMIN_PASSWORD, value: password}
+            - {name: RESHAPR_ADMIN_EMAIL, value: reshapr@example.com}
+            - {name: RESHAPR_DEFAULT_GATEWAY_TOKENS, value: my-super-secret-token-xyz}
+            - {name: RESHAPR_ENCRYPTION_KEYS_V1, value: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="}
+            - {name: RESHAPR_ENCRYPTION_ACTIVE_KEY_ID, value: v1}
+            - {name: RESHAPR_ENCRYPTION_KEY, value: my-super-secret-key-32-char-long}
+          ports: [{containerPort: 5555}]
+          readinessProbe:
+            httpGet: {path: /q/health/ready, port: 5555}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: control-plane, namespace: reshapr}
+spec:
+  selector: {app: control-plane}
+  ports: [{port: 5555}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: reshapr-gateways, namespace: reshapr}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app: gateway}
+  ports: [{port: 7777, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: gateway, namespace: reshapr}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: gateway}}
+  template:
+    metadata: {labels: {app: gateway}}
+    spec:
+      containers:
+        - name: proxy
+          image: registry.reshapr.io/reshapr/reshapr-proxy:1.1.0
+          env:
+            - name: RESHAPR_GATEWAY_ID
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - {name: RESHAPR_CTRL_HOST, value: control-plane}
+            - {name: RESHAPR_CTRL_PORT, value: "5555"}
+            - {name: RESHAPR_CTRL_TOKEN, value: reshapr-my-super-secret-token-xyz}
+            - {name: QUARKUS_OTEL_SDK_DISABLED, value: "true"}
+            - name: JAVA_OPTS_APPEND
+              value: "-XX:+UseCompactObjectHeaders -Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager --enable-preview -Dreshapr.infinispan.stack=reshapr-k8s -Dreshapr.infinispan.dns-query=reshapr-gateways.reshapr.svc.cluster.local -Dreshapr.infinispan.encrypt.keystore=/etc/reshapr-cluster/reshapr-cluster.jceks -Dreshapr.infinispan.encrypt.store-password=changeit -Dreshapr.infinispan.encrypt.key-password=changeit"
+          ports: [{containerPort: 7777}]
+          volumeMounts:
+            - {name: cluster-keystore, mountPath: /etc/reshapr-cluster, readOnly: true}
+      volumes:
+        - name: cluster-keystore
+          secret: {secretName: reshapr-cluster-keystore}

@@ -1,7 +1,16 @@
 #!/bin/bash
 # Start the reShapr single-node stack (postgres, control plane, gateway) on apple/container.
 # Equivalent of install/docker-compose-all-in-one.yml, without compose.
+# Usage: up.sh [--ui]   (or RESHAPR_UI=1) also starts the web UI on 127.0.0.1:${RESHAPR_UI_HOST_PORT:-3333}
 set -euo pipefail
+
+UI="${RESHAPR_UI:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    --ui) UI=1 ;;
+    *) echo "usage: $0 [--ui]" >&2; exit 2 ;;
+  esac
+done
 
 RELEASE="${RESHAPR_RELEASE:-1.1.0}"
 REG="${RESHAPR_REGISTRY:-registry.reshapr.io/reshapr}"
@@ -44,5 +53,19 @@ container run -d --name reshapr-gateway-01 -p 127.0.0.1:${GW_PORT}:7777 \
   -e RESHAPR_CTRL_HOST="$(ip_of reshapr-control-plane)" -e RESHAPR_CTRL_PORT=5555 \
   -e RESHAPR_CTRL_TOKEN="reshapr-$CTRL_TOKEN" \
   "$REG/reshapr-proxy:$RELEASE"
+
+if [ "$UI" = 1 ]; then
+  UI_PORT="${RESHAPR_UI_HOST_PORT:-3333}"
+  # Same dev admin key as install/docker-compose-ui-addon.yml, fetched from upstream unless provided.
+  API_KEY="${RESHAPR_ADMIN_API_KEY:-$(curl -fsSL "https://raw.githubusercontent.com/reshaprio/reshapr/main/install/docker-compose-ui-addon.yml" | sed -n 's/.*RESHAPR_ADMIN_API_KEY=//p')}"
+  container run -d --name reshapr-web-ui -p 127.0.0.1:${UI_PORT}:3333 \
+    -e RESHAPR_CTRL_URL="http://$(ip_of reshapr-control-plane):5555" \
+    -e RESHAPR_ADMIN_API_KEY="$API_KEY" \
+    -e RESHAPR_WEBUI_PUBLIC_URL="http://localhost:${CTRL_PORT}" \
+    -e ORIGIN="http://localhost:${UI_PORT}" -e BODY_SIZE_LIMIT=12M \
+    "${RESHAPR_UI_IMAGE:-$REG/reshapr-ui:nightly}"
+  wait_for web-ui 60 curl -fs -o /dev/null http://127.0.0.1:${UI_PORT}/
+  echo "web ui: http://127.0.0.1:${UI_PORT}  (login admin / password)"
+fi
 
 echo "control plane: http://127.0.0.1:${CTRL_PORT}  gateway: http://127.0.0.1:${GW_PORT}"

@@ -23,6 +23,8 @@ make verify    # uses an isolated HOME (.state/home), your reshapr CLI session i
 make down
 ```
 
+Web UI (opt-in, like `reshapr run --ui`): `make up-ui` or `./scripts/up.sh --ui` serves http://127.0.0.1:3333 (override: `RESHAPR_UI_HOST_PORT`, `RESHAPR_UI_IMAGE`; login admin / password).
+
 Hardened control plane: `RESHAPR_EXTRA_RUN_ARGS="--read-only --cap-drop ALL --tmpfs /tmp" make up`.
 
 Containers are wired by IP (`container ls`), because `<name>.<domain>` resolution inside containers goes through the macOS resolver and needs the sudo step.

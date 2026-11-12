@@ -15,4 +15,4 @@ out="$(reshapr import \
   --backendEndpoint https://api.open-meteo.com 2>&1)" || { echo "$out"; exit 1; }
 echo "$out" | grep -E "Endpoints|Exposition Name" || true
 
-"$HERE/mcp-smoke.sh" "http://127.0.0.1:${GW_PORT}/mcp/${EXPOSITION}"
+"$HERE/mcp-smoke.sh" "http://127.0.0.1:${GW_PORT}/mcp/${EXPOSITION}" | jq '.result.content[0].text | fromjson'

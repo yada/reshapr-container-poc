@@ -6,14 +6,33 @@ Proof of concept: run the **[reShapr](https://github.com/reshaprio/reshapr) MCP 
 
 | Script | What it does |
 |---|---|
-| `scripts/up.sh` | postgres, control plane and gateway with `container run`, gated by readiness loops |
-| `scripts/verify.sh` | imports Open-Meteo and runs MCP `initialize`, `tools/list`, `tools/call` through the gateway |
+| `scripts/up.sh` | postgres, control plane and gateway with `container run`, gated by readiness loops; `--ui` adds the web UI |
+| `scripts/verify.sh` | imports Open-Meteo and runs MCP `initialize`, `tools/list`, `tools/call` through the gateway, result printed with `jq` |
 | `scripts/down.sh` | removes the three containers |
 | `scripts/k8s-cluster.yaml` | 2-gateway clustered stack for `container cluster create` (DNS_PING, encrypted JGroups) |
 
+## Status
+
+Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [docs/FINDINGS.md](docs/FINDINGS.md)):
+
+| Done | |
+|---|---|
+| T1-T5 | native arm64 images, stack ready in ~18 s, MCP end to end (`make verify`), hardened run (`--read-only --cap-drop ALL`) |
+| T6-T7 | duplicate alias rejected; 2 gateways share MCP sessions inside a `container cluster` |
+| T3, T9 | sudo DNS: `<name>.test` and `host.container.internal` pass; `reshapr run --engine container` prototype in [PR #620](https://github.com/reshaprio/reshapr/pull/620) |
+| Extras | opt-in web UI (`make up-ui`), `make` usage page |
+
+## Next steps
+
+1. Done: `reshapr run --engine container` (T9) prototype, under review in [PR #620](https://github.com/reshaprio/reshapr/pull/620). Follow up on CI and review comments.
+2. Done: the sudo DNS checks (`<name>.test` and `host.container.internal` both pass) and the `docker-compose-cluster.yml` failure on Docker (F8).
+3. T8: an agent inside a container VM reaching tools only through reShapr.
+4. Upstream issues. Filed: reShapr [#619](https://github.com/reshaprio/reshapr/issues/619) and [PR #620](https://github.com/reshaprio/reshapr/pull/620) (`--engine container`), [#621](https://github.com/reshaprio/reshapr/issues/621) (cluster keystore). To file: reShapr discovery retry; apple/container shared aliases / multi-A DNS answers, sudo resolver dependency, `rs.test` kubeconfig.
+5. Docs on reshapr.io and a recipe in `reshapr-agent-skills`.
+
 ## Prerequisites
 
-Apple silicon, macOS 26+, `container` 1.7+ (`container system start`), the reShapr CLI (`npm i -g @reshapr/reshapr-cli`), `curl`. No sudo is needed for anything here; the optional `sudo container system dns create` only adds `<name>.test` host resolution.
+Apple silicon, macOS 26+, `container` 1.7+ (`container system start`), the reShapr CLI (`npm i -g @reshapr/reshapr-cli`), `curl`. No sudo is needed for anything here. Optional, with sudo: `container system dns create test` adds `<name>.test` resolution, and `dns create host.container.internal --localhost <ip>` lets containers reach host services (its rule is lost on reboot).
 
 ## Quick start
 
@@ -27,7 +46,7 @@ Web UI (opt-in, like `reshapr run --ui`): `make up-ui` or `./scripts/up.sh --ui`
 
 Hardened control plane: `RESHAPR_EXTRA_RUN_ARGS="--read-only --cap-drop ALL --tmpfs /tmp" make up`.
 
-Containers are wired by IP (`container ls`), because `<name>.<domain>` resolution inside containers goes through the macOS resolver and needs the sudo step.
+Containers are wired by IP (`container ls`) so no sudo is needed. `<name>.test` names also work, but only after `sudo container system dns create test`, because in-container lookups go through the macOS resolver.
 
 ## Clustered gateways (container cluster)
 

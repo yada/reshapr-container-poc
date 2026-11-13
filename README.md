@@ -2,7 +2,7 @@
 
 Proof of concept: run the **[reShapr](https://github.com/reshaprio/reshapr) MCP runtime stack on [apple/container](https://github.com/apple/container)** (Linux containers as lightweight VMs on macOS), without Docker or Compose.
 
-`reshapr run` only knows `docker` / `podman` + `compose`. apple/container has no compose, restart policy, healthcheck or `host-gateway`, so this repo provides a script equivalent and records what works and what does not. Results: [docs/FINDINGS.md](docs/FINDINGS.md).
+`reshapr run --engine apple` (merged in [reshaprio/reshapr#620](https://github.com/reshaprio/reshapr/pull/620), in releases after 1.1.1) now starts the stack on apple/container from the release compose files. apple/container itself has no compose, restart policy, healthcheck or `host-gateway`, so this repo keeps a script equivalent (what the CLI does not cover: hardened mode, configurable ports, `verify.sh`, `container cluster`) and records what works and what does not. Results: [docs/FINDINGS.md](docs/FINDINGS.md).
 
 | Script | What it does |
 |---|---|
@@ -19,15 +19,15 @@ Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [d
 |---|---|
 | T1-T5 | native arm64 images, stack ready in ~18 s, MCP end to end (`make verify`), hardened run (`--read-only --cap-drop ALL`) |
 | T6-T7 | duplicate alias rejected; 2 gateways share MCP sessions inside a `container cluster` |
-| T3, T9 | sudo DNS: `<name>.test` and `host.container.internal` pass; `reshapr run --engine container` prototype in [PR #620](https://github.com/reshaprio/reshapr/pull/620) |
+| T3, T9 | sudo DNS: `<name>.test` and `host.container.internal` pass; `reshapr run --engine apple` merged ([PR #620](https://github.com/reshaprio/reshapr/pull/620)) and verified on `main` |
 | Extras | opt-in web UI (`make up-ui`), `make` usage page |
 
 ## Next steps
 
-1. Done: `reshapr run --engine container` (T9) prototype, under review in [PR #620](https://github.com/reshaprio/reshapr/pull/620). Follow up on CI and review comments.
-2. Done: the sudo DNS checks (`<name>.test` and `host.container.internal` both pass) and the `docker-compose-cluster.yml` failure on Docker (F8).
+1. Done: `reshapr run --engine apple` (T9), merged in [PR #620](https://github.com/reshaprio/reshapr/pull/620) and verified on `main`. Re-test on the first release that includes it (1.1.1 does not).
+2. Done: the sudo DNS checks (`<name>.test` and `host.container.internal` both pass) and the `docker-compose-cluster.yml` failure on Docker (F8), fixed upstream in [#621](https://github.com/reshaprio/reshapr/issues/621) (keystore-init container, not re-tested here). Check whether `scripts/k8s-cluster.yaml` still needs its keystore Secret.
 3. T8: an agent inside a container VM reaching tools only through reShapr.
-4. Upstream issues. Filed: reShapr [#619](https://github.com/reshaprio/reshapr/issues/619) and [PR #620](https://github.com/reshaprio/reshapr/pull/620) (`--engine container`), [#621](https://github.com/reshaprio/reshapr/issues/621) (cluster keystore). To file: reShapr discovery retry; apple/container shared aliases / multi-A DNS answers, sudo resolver dependency, `rs.test` kubeconfig.
+4. Upstream issues. Filed: reShapr [#619](https://github.com/reshaprio/reshapr/issues/619) (`--engine apple`, done), [#621](https://github.com/reshaprio/reshapr/issues/621) (cluster keystore, done). To file: reShapr discovery retry; apple/container shared aliases / multi-A DNS answers, sudo resolver dependency, `rs.test` kubeconfig.
 5. Docs on reshapr.io and a recipe in `reshapr-agent-skills`.
 
 ## Prerequisites

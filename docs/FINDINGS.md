@@ -14,7 +14,7 @@ Tested 2026-11-11 on macOS 27.2 (build 26B123), Apple silicon, `container` 1.7.1
 | T6 | Two containers sharing alias `svc.test` | **Rejected**: `Error: alias(es) already exist: ["svc.test"]` |
 | T7 | `container cluster create --shared-image-store`, 2 gateways with `reshapr-k8s` stack | **Pass** after fixes below. MCP session created on gateway 1 is accepted by gateway 2 (`tools/list`), so state is replicated |
 | T8 | Agent in a container VM through reShapr | **Not run** (no egress allow-list or credential-injection to compare in practice) |
-| T9 | `reshapr run --engine container` | **Prototype** in [reshaprio/reshapr#620](https://github.com/reshaprio/reshapr/pull/620) (issue #619), tested end to end (`run --ui`, `status`, `stop`); `scripts/up.sh` is the manual equivalent (`--ui` mirrors `reshapr run --ui`; its admin key was accepted by the control plane via `x-reshapr-api-key`) |
+| T9 | `reshapr run --engine apple` | **Merged** in [reshaprio/reshapr#620](https://github.com/reshaprio/reshapr/pull/620) (issue #619; renamed from `container` to `apple` and built from the release compose files after review). **Verified on `main`** (2026-11-13, CLI built from `origin/main`, release 1.1.1, isolated HOME): `run --ui` starts postgres, control plane, gateway and UI (200 on 5555, 7777, 3333); `status` lists them; a second `run` is refused; `stop` removes them; MCP `initialize`, `tools/list` and `tools/call` pass through the gateway with the PoC's `mcp-smoke.sh`. Two limits of that run: the compose files were pre-fetched via `gh api` into the CLI cache because `raw.githubusercontent.com` was unreachable, and `tools/call` hit a local stub backend because `api.open-meteo.com` timed out from the host too. Not in a release yet (1.1.1 predates the merge). `scripts/up.sh` is the manual equivalent (`--ui` mirrors `reshapr run --ui`; its admin key was accepted by the control plane via `x-reshapr-api-key`) |
 
 ## Findings
 
@@ -25,13 +25,13 @@ Tested 2026-11-11 on macOS 27.2 (build 26B123), Apple silicon, `container` 1.7.1
 - **F5 `--shared-image-store` works**: pods ran locally pulled reShapr images without a registry.
 - **F6 Host-to-container by IP works** (192.168.65.x via bridge101); first connection once failed with "no route to host" and succeeded on retry.
 - **F7 Docker Desktop port clash.** A running Docker reShapr stack on 5555/7777 made the readiness probe false-positive. `up.sh` ports are configurable for that reason.
-- **F8 (reShapr, independent of container)** `reshapr-k8s` stack requires a JCEKS keystore (`reshapr-cluster.jceks`, `reshapr.infinispan.encrypt.*`); without it the gateway returns HTTP 500 on first MCP request (`ISPN000541 ... FileNotFoundException: reshapr-cluster.jceks`). `install/docker-compose-cluster.yml` at reshapr 3dd7a4c sets no keystore, and running it unmodified on Docker (Compose v5.6.1, `:nightly` images) gives the same result: both gateways report ready, then the first MCP `initialize` returns HTTP 500 with the same `ISPN000541 ... FileNotFoundException`. Confirmed upstream bug, not an apple/container limitation.
+- **F8 (reShapr, independent of container)** `reshapr-k8s` stack requires a JCEKS keystore (`reshapr-cluster.jceks`, `reshapr.infinispan.encrypt.*`); without it the gateway returns HTTP 500 on first MCP request (`ISPN000541 ... FileNotFoundException: reshapr-cluster.jceks`). `install/docker-compose-cluster.yml` at reshapr 3dd7a4c sets no keystore, and running it unmodified on Docker (Compose v5.6.1, `:nightly` images) gives the same result: both gateways report ready, then the first MCP `initialize` returns HTTP 500 with the same `ISPN000541 ... FileNotFoundException`. Confirmed upstream bug, not an apple/container limitation. Filed as reshaprio/reshapr#621 and fixed on `main` (keystore-init container in `docker-compose-cluster.yml`); not re-tested here.
 - **F9 (reShapr)** Gateways that start before the control plane is ready log `Failed to fetch expositions during startup` and do not retry discovery until restarted (rollout restart fixed it). Compose `depends_on: service_healthy` hides this; Kubernetes needs an init wait or retry.
 - **F10 `postgres:17-alpine` pull** unpacked several platforms (`linux/s390x` seen in output), about 2 min first time; reShapr images about 1 min each.
 
 ## Upstream candidates
 
-- reShapr: `--engine container` (or documented script), configurable host alias instead of `host.docker.internal`, compose-cluster keystore (F8), discovery retry (F9).
+- reShapr: done: `--engine apple` (#619, #620) and the compose-cluster keystore (F8, #621). To file: configurable host alias instead of `host.docker.internal`, discovery retry (F9).
 - apple/container: multi-A / shared alias (F3), host-side DNS not required for container-to-container lookup (F2), kubeconfig by IP (F4), healthcheck/restart.
 
 ## Not verified

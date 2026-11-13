@@ -13,7 +13,7 @@ Tested 2026-11-11 on macOS 27.2 (build 26B123), Apple silicon, `container` 1.7.1
 | T5 | Control plane `--read-only --cap-drop ALL` | **Pass with `--tmpfs /tmp`** (Vert.x cache dir needs a writable `/tmp`); MCP verify passes on the hardened stack |
 | T6 | Two containers sharing alias `svc.test` | **Rejected**: `Error: alias(es) already exist: ["svc.test"]` |
 | T7 | `container cluster create --shared-image-store`, 2 gateways with `reshapr-k8s` stack | **Pass** after fixes below. MCP session created on gateway 1 is accepted by gateway 2 (`tools/list`), so state is replicated |
-| T8 | Agent in a container VM through reShapr | **Not run** (no egress allow-list or credential-injection to compare in practice) |
+| T8 | Agent in a container VM through reShapr | **Pass, with one limit** (2026-11-13, reShapr 1.1.0 stack from `make up`). An `alpine` container (own VM, no env, no secrets) ran `mcp-smoke.sh` against the gateway IP: `initialize` 200, `tools/list` returns `get_v1_forecast`, `tools/call` returns `isError:false` with the Paris forecast. The same VM gets `401` from the control plane admin API (`/api/v1/services`) without a key, so it only sees the MCP surface. **Limit:** apple/container has no egress allow-list, so the same VM can also call `api.open-meteo.com` directly (200). reShapr governs the path the agent is given, it does not force it; enforcing it needs a network-level control, which `container` lacks (sbx provides one) |
 | T9 | `reshapr run --engine apple` | **Merged** in [reshaprio/reshapr#620](https://github.com/reshaprio/reshapr/pull/620) (issue #619; renamed from `container` to `apple` and built from the release compose files after review). **Verified on `main`** (2026-11-13, CLI built from `origin/main`, release 1.1.1, isolated HOME): `run --ui` starts postgres, control plane, gateway and UI (200 on 5555, 7777, 3333); `status` lists them; a second `run` is refused; `stop` removes them; MCP `initialize`, `tools/list` and `tools/call` pass through the gateway with the PoC's `mcp-smoke.sh`. Two limits of that run: the compose files were pre-fetched via `gh api` into the CLI cache because `raw.githubusercontent.com` was unreachable, and `tools/call` hit a local stub backend because `api.open-meteo.com` timed out from the host too. Not in a release yet (1.1.1 predates the merge). `scripts/up.sh` is the manual equivalent (`--ui` mirrors `reshapr run --ui`; its admin key was accepted by the control plane via `x-reshapr-api-key`) |
 
 ## Findings
@@ -36,4 +36,4 @@ Tested 2026-11-11 on macOS 27.2 (build 26B123), Apple silicon, `container` 1.7.1
 
 ## Not verified
 
-Agent-in-container sandbox (T8), macOS 15 behaviour, `host.container.internal` surviving a reboot.
+macOS 15 behaviour, `host.container.internal` surviving a reboot.

@@ -26,7 +26,7 @@ Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [d
 
 1. Done: `reshapr run --engine apple` (T9), merged in [PR #620](https://github.com/reshaprio/reshapr/pull/620) and verified on `main`. Re-test on the first release that includes it (1.1.1 does not).
 2. Done: the sudo DNS checks (`<name>.test` and `host.container.internal` both pass) and the `docker-compose-cluster.yml` failure on Docker (F8), fixed upstream in [#621](https://github.com/reshaprio/reshapr/issues/621) (keystore-init container, not re-tested here). Check whether `scripts/k8s-cluster.yaml` still needs its keystore Secret.
-3. T8: an agent inside a container VM reaching tools only through reShapr.
+3. Done: T8, an agent in its own container VM reaches the tools through the gateway and gets 401 on the admin API. Limit: no egress allow-list in `container`, so the agent could also call the backend directly (see `docs/FINDINGS.md`).
 4. Upstream issues. Filed: reShapr [#619](https://github.com/reshaprio/reshapr/issues/619) (`--engine apple`, done), [#621](https://github.com/reshaprio/reshapr/issues/621) (cluster keystore, done). To file: reShapr discovery retry; apple/container shared aliases / multi-A DNS answers, sudo resolver dependency, `rs.test` kubeconfig.
 5. Docs on reshapr.io and a recipe in `reshapr-agent-skills`.
 

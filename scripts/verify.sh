@@ -10,9 +10,10 @@ export HOME="${VERIFY_HOME:-$HERE/../.state/home}"
 mkdir -p "$HOME"
 
 reshapr login -s "http://localhost:${CTRL_PORT}" -u admin -p password >/dev/null
+BACKEND="${BACKEND_ENDPOINT:-https://api.open-meteo.com}"
 out="$(reshapr import \
-  -u https://raw.githubusercontent.com/open-meteo/open-meteo/refs/heads/main/openapi/forecast.yml \
-  --backendEndpoint https://api.open-meteo.com 2>&1)" || { echo "$out"; exit 1; }
+  -f "$HERE/../fixtures/open-meteo-forecast.yml" \
+  --backendEndpoint "$BACKEND" 2>&1)" || { echo "$out"; exit 1; }
 echo "$out" | grep -E "Endpoints|Exposition Name" || true
 
 "$HERE/mcp-smoke.sh" "http://127.0.0.1:${GW_PORT}/mcp/${EXPOSITION}" | jq '.result.content[0].text | fromjson'

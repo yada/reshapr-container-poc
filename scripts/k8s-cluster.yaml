@@ -99,3 +99,44 @@ spec:
       volumes:
         - name: cluster-keystore
           secret: {secretName: reshapr-cluster-keystore}
+---
+# One-shot Job that creates the shared JGroups keystore Secret: every gateway replica must mount the SAME key.
+# Gateways stay in ContainerCreating until the Secret exists, so no ordering is needed.
+# To regenerate: kubectl -n reshapr delete job keystore-gen secret reshapr-cluster-keystore, then apply again.
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: keystore-gen, namespace: reshapr}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: keystore-gen, namespace: reshapr}
+rules:
+  - {apiGroups: [""], resources: [secrets], verbs: [create]}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: keystore-gen, namespace: reshapr}
+subjects: [{kind: ServiceAccount, name: keystore-gen, namespace: reshapr}]
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: keystore-gen}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: keystore-gen, namespace: reshapr}
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: keystore-gen
+      initContainers:
+        - name: keytool
+          image: registry.reshapr.io/reshapr/reshapr-proxy:1.1.0
+          command: [keytool, -genseckey, -alias, reshapr-cluster, -keyalg, AES, -keysize, "256", -storetype, JCEKS, -keystore, /out/reshapr-cluster.jceks, -storepass, changeit, -keypass, changeit]
+          volumeMounts: [{name: out, mountPath: /out}]
+      containers:
+        - name: create-secret
+          image: registry.k8s.io/kubectl:v1.35.5
+          args: [-n, reshapr, create, secret, generic, reshapr-cluster-keystore, --from-file=/out/reshapr-cluster.jceks]
+          volumeMounts: [{name: out, mountPath: /out}]
+      volumes:
+        - {name: out, emptyDir: {}}

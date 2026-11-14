@@ -26,7 +26,7 @@ Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [d
 ## Next steps
 
 1. Done: `reshapr run --engine apple` (T9), merged in [PR #620](https://github.com/reshaprio/reshapr/pull/620) and verified on `main`. Re-test on the first release that includes it (1.1.1 does not).
-2. Done: the sudo DNS checks (`<name>.test` and `host.container.internal` both pass) and the `docker-compose-cluster.yml` failure on Docker (F8), fixed upstream in [#621](https://github.com/reshaprio/reshapr/issues/621) (keystore-init container, not re-tested here). Checked on `main` and tested on a `container cluster` (2026-11-14): `scripts/k8s-cluster.yaml` still needs its shared keystore Secret. The #621 fix only touched `install/docker-compose-cluster.yml`. A per-pod init container (copied from upstream's idea) does not work on Kubernetes: each replica generates a different AES key, and the second gateway never joins (`GMS ... JOIN ... timed out`; see F11 in `docs/FINDINGS.md`).
+2. Done: the sudo DNS checks (`<name>.test` and `host.container.internal` both pass) and the `docker-compose-cluster.yml` failure on Docker (F8), fixed upstream in [#621](https://github.com/reshaprio/reshapr/issues/621) (keystore-init container, not re-tested here). Checked on `main` and tested on a `container cluster` (2026-11-14): `scripts/k8s-cluster.yaml` still needs a shared keystore Secret, now created by a one-shot `keystore-gen` Job in the same file. The #621 fix only touched `install/docker-compose-cluster.yml`. A per-pod init container (copied from upstream's idea) does not work on Kubernetes: each replica generates a different AES key, and the second gateway never joins (`GMS ... JOIN ... timed out`; see F11 in `docs/FINDINGS.md`).
 3. Done: T8, an agent in its own container VM reaches the tools through the gateway and gets 401 on the admin API. Limit: no egress allow-list in `container`, so the agent could also call the backend directly (see `docs/FINDINGS.md`).
 4. Upstream issues. Filed: reShapr [#619](https://github.com/reshaprio/reshapr/issues/619) (`--engine apple`, done), [#621](https://github.com/reshaprio/reshapr/issues/621) (cluster keystore, done). To file: reShapr discovery retry; apple/container shared aliases / multi-A DNS answers, sudo resolver dependency, `rs.test` kubeconfig.
 5. Done: egress allow-list gap (T8) reported as a comment on [apple/container discussion #719](https://github.com/apple/container/discussions/719#discussioncomment-19611430); related [#1320](https://github.com/apple/container/issues/1320). No new issue filed (the topic exists). Follow the maintainers' reply; they want use cases and UX rather than a `pfctl`-based command.
@@ -57,15 +57,11 @@ container cluster create --name rs --shared-image-store
 container cluster list --nodes                     # node IP
 # the kubeconfig uses rs.test (needs sudo DNS); use the node IP instead:
 K="kubectl --server https://<node-ip>:6443 --insecure-skip-tls-verify"
-# keystore for JGroups SYM_ENCRYPT, generated with the JDK of the proxy image:
-mkdir -p .state/ks && container run --rm -v $PWD/.state/ks:/out --entrypoint keytool \
-  registry.reshapr.io/reshapr/reshapr-proxy:1.1.0 -genseckey -alias reshapr-cluster -keyalg AES \
-  -keysize 256 -storetype JCEKS -keystore /out/reshapr-cluster.jceks -storepass changeit -keypass changeit
-$K apply -f scripts/k8s-cluster.yaml   # creates the namespace (the Secret below needs it, so apply twice)
-$K -n reshapr create secret generic reshapr-cluster-keystore --from-file=.state/ks/reshapr-cluster.jceks
-$K apply -f scripts/k8s-cluster.yaml
+$K apply -f scripts/k8s-cluster.yaml   # includes a one-shot Job that creates the shared keystore Secret (retry once if the namespace is not ready yet)
 $K -n reshapr rollout restart deploy/gateway   # gateways do not retry discovery if the control plane was not ready yet
 ```
+
+The `keystore-gen` Job generates one JCEKS key with `keytool` (proxy image) and creates the `reshapr-cluster-keystore` Secret with `registry.k8s.io/kubectl`, so every gateway mounts the same key. Gateways wait in `ContainerCreating` until the Secret exists. To regenerate: `$K -n reshapr delete job keystore-gen secret reshapr-cluster-keystore`, then apply again. Do not generate the key per pod: replicas would get different keys and never join (F11).
 
 `changeit` and the demo tokens/keys are throwaway values, do not reuse them.
 

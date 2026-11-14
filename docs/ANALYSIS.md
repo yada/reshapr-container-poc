@@ -18,7 +18,7 @@ They sit at different layers: container = *where reShapr's processes run*; reSha
 | F3 | Proxy→control-plane and control-plane→host IdP use `host.docker.internal` | `install/start-proxy.sh`, compose files | On container: `sudo container system dns create host.container.internal --localhost <ip>` (`docs/host-integration.md`); sudo + pf limitations; or use container names on default net (`<name>.test`) |
 | F4 | **Gateway clustering via JGroups DNS_PING needs one DNS name returning several A records** (`reshapr.infinispan.dns-query=reshapr-gateways`) | `install/docker-compose-cluster.yml:4-6,88,118`; `proxy/src/main/resources/infinispan.xml:41-50` | See F5 |
 | F5 | **container cannot provide that today**: an alias already owned by another host is rejected (`.exists`), and the DNS table maps a name to a single IPv4 (`hosts4: [String: IPv4Address]`, answer `[record]`) | `Sources/Services/Network/Server/AttachmentAllocator.swift:44-49,60-80`; `Sources/DNSServer/Handlers/HostTableResolver.swift:25-30,83-84` | Multi-gateway DNS_PING cluster fails on plain containers. Single-node (`reshapr-local` default stack in Dockerfile.jvm) is fine. Multi-node should run in K8s (F7) |
-| F6 | Bare-name discovery on custom networks is missing; only domain-qualified names on `default` | `docs/networking.md:85-100` (apple/container#1809, #856) | Wire by `<name>.test` on default network |
+| F6 | Bare-name discovery on custom networks is missing; only domain-qualified names on `default` | `docs/networking.md:85-100` (apple/container#1809, apple/container#856) | Wire by `<name>.test` on default network |
 | F7 | container ships local Kubernetes (`container cluster create`, `--shared-image-store`, multi-node, custom CNI); reShapr already has a K8s DNS_PING stack (`reshapr-k8s`) | `docs/cluster.md`; `infinispan.xml:18,41` | Natural place to test reShapr's multi-gateway/Helm path on a Mac |
 | F8 | container gives per-container VM isolation, `--read-only`, `--cap-drop`, `--env-file`, `--publish`, `--publish-socket`, Keychain integration | `docs/command-reference.md:30-79`; `docs/technical-overview.md` | Hardening for the control plane that holds AES-GCM-encrypted secrets (`RESHAPR_ENCRYPTION_KEYS_*`) |
 | F9 | reShapr already pairs with a sandbox: sbx kits isolate the agent, reShapr governs the API, key injected by sbx proxy | `reshapr-sbx-poc/README.md`, `docs/PLAN.md` §1 | Same pattern is possible on container but **container lacks sbx's egress allow-list and credential-injection proxy** (no such feature in `Sources/` or docs) — [static] |
@@ -41,7 +41,7 @@ They sit at different layers: container = *where reShapr's processes run*; reSha
 
 ## 4. Upstream asks
 - **reShapr**: add `container` as engine (script generator or detection that refuses with guidance); make `host.docker.internal` configurable (env/compose var) so non-Docker engines can inject a host alias; document single-node-only on engines without multi-A DNS.
-- **apple/container**: allow shared alias / multi-A answers (round-robin) for service discovery; bare-name resolution on custom networks (#1809); host alias without sudo; health checks/restart policy.
+- **apple/container**: allow shared alias / multi-A answers (round-robin) for service discovery; bare-name resolution on custom networks (apple/container#1809); host alias without sudo; health checks/restart policy.
 
 ## 5. Runtime verification checklist (not run; needs a Mac with `container`)
 1. Postgres + control-plane + proxy start via `container run`; `curl -f :5555/q/health/ready` ok.

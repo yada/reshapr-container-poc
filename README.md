@@ -20,6 +20,7 @@ Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [d
 | T1-T5 | native arm64 images, stack ready in ~18 s, MCP end to end (`make verify`), hardened run (`--read-only --cap-drop ALL`) |
 | T6-T7 | duplicate alias rejected; 2 gateways share MCP sessions inside a `container cluster` |
 | T3, T9 | sudo DNS: `<name>.test` and `host.container.internal` pass; `reshapr run --engine apple` merged ([PR #620](https://github.com/reshaprio/reshapr/pull/620)) and verified on `main` |
+| T8 | agent in its own container VM reaches tools through the gateway, 401 on the admin API; limit: no egress allow-list |
 | Extras | opt-in web UI (`make up-ui`), `make` usage page |
 
 ## Next steps
@@ -28,7 +29,8 @@ Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [d
 2. Done: the sudo DNS checks (`<name>.test` and `host.container.internal` both pass) and the `docker-compose-cluster.yml` failure on Docker (F8), fixed upstream in [#621](https://github.com/reshaprio/reshapr/issues/621) (keystore-init container, not re-tested here). Check whether `scripts/k8s-cluster.yaml` still needs its keystore Secret.
 3. Done: T8, an agent in its own container VM reaches the tools through the gateway and gets 401 on the admin API. Limit: no egress allow-list in `container`, so the agent could also call the backend directly (see `docs/FINDINGS.md`).
 4. Upstream issues. Filed: reShapr [#619](https://github.com/reshaprio/reshapr/issues/619) (`--engine apple`, done), [#621](https://github.com/reshaprio/reshapr/issues/621) (cluster keystore, done). To file: reShapr discovery retry; apple/container shared aliases / multi-A DNS answers, sudo resolver dependency, `rs.test` kubeconfig.
-5. Docs on reshapr.io and a recipe in `reshapr-agent-skills`.
+5. Deferred: compare network control, apple/container vs sbx (egress allow-list), test it, and maybe file an apple/container issue (T8 shows the agent VM can bypass reShapr).
+6. Docs on reshapr.io and a recipe in `reshapr-agent-skills`.
 
 ## Prerequisites
 

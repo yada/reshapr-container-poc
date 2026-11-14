@@ -12,7 +12,7 @@ for arg in "$@"; do
   esac
 done
 
-RELEASE="${RESHAPR_RELEASE:-1.1.0}"
+RELEASE="${RESHAPR_RELEASE:-1.1.1}"
 REG="${RESHAPR_REGISTRY:-registry.reshapr.io/reshapr}"
 EXTRA="${RESHAPR_EXTRA_RUN_ARGS:-}"
 CTRL_TOKEN="my-super-secret-token-xyz"

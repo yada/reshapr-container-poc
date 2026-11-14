@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
         - name: ctrl
-          image: registry.reshapr.io/reshapr/reshapr-ctrl:1.1.0
+          image: registry.reshapr.io/reshapr/reshapr-ctrl:1.1.1
           env:
             - {name: QUARKUS_DATASOURCE_JDBC_URL, value: "jdbc:postgresql://postgres:5432/reshapr"}
             - {name: QUARKUS_DATASOURCE_USERNAME, value: reshapr}
@@ -83,7 +83,7 @@ spec:
     spec:
       containers:
         - name: proxy
-          image: registry.reshapr.io/reshapr/reshapr-proxy:1.1.0
+          image: registry.reshapr.io/reshapr/reshapr-proxy:1.1.1
           env:
             - name: RESHAPR_GATEWAY_ID
               valueFrom: {fieldRef: {fieldPath: metadata.name}}
@@ -130,7 +130,7 @@ spec:
       serviceAccountName: keystore-gen
       initContainers:
         - name: keytool
-          image: registry.reshapr.io/reshapr/reshapr-proxy:1.1.0
+          image: registry.reshapr.io/reshapr/reshapr-proxy:1.1.1
           command: [keytool, -genseckey, -alias, reshapr-cluster, -keyalg, AES, -keysize, "256", -storetype, JCEKS, -keystore, /out/reshapr-cluster.jceks, -storepass, changeit, -keypass, changeit]
           volumeMounts: [{name: out, mountPath: /out}]
       containers:

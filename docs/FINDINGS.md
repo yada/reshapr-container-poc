@@ -6,7 +6,7 @@ Tested 2026-11-11 on macOS 27.2 (build 26B123), Apple silicon, `container` 1.7.1
 
 | # | Test | Result |
 |---|---|---|
-| T1 | Pull postgres:17-alpine, reshapr-ctrl:1.1.0, reshapr-proxy:1.1.0 | **Pass**, native `linux/arm64` |
+| T1 | Pull postgres:17-alpine, reshapr-ctrl and reshapr-proxy (1.1.0, 1.1.1) | **Pass**, native `linux/arm64`. Re-validated on 1.1.1 (2026-11-14): T1, T2, T4 (also with `--read-only --cap-drop ALL --tmpfs /tmp`), T6, T7 (`container cluster`, 2 gateways, session created on gateway 1 accepted by gateway 2) and T8 (gateway 200, admin API 401, direct backend 200) pass; defaults bumped to 1.1.1 |
 | T2 | Single-node stack with `container run` (about 18 s from `up.sh` to ready) | **Pass**, control plane `/q/health/ready` UP, gateway registers (`reshapr-gateway-00`) |
 | T3 | Proxy to control plane | **Pass by IP**. By name (`<name>.test`) **fails without sudo**, see F2. With `sudo container system dns create test`, `<name>.test` resolves from the host and container to container (ping and `nslookup` via 192.168.65.1). `host.container.internal` (created with `sudo ... dns create host.container.internal --localhost 203.0.113.113`) **passes**: a container fetched a page from a host server bound to `127.0.0.1` |
 | T4 | Import Open-Meteo, MCP `initialize`, `tools/list`, `tools/call` via gateway | **Pass** (`isError:false`, real forecast) |

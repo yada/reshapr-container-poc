@@ -32,7 +32,7 @@ Tested 2026-11-11 on macOS 27.2 (build 26B123), Apple silicon, `container` 1.7.1
 ## Upstream candidates
 
 - reShapr: done: `--engine apple` (#619, #620) and the compose-cluster keystore (F8, #621). To file: configurable host alias instead of `host.docker.internal`, discovery retry (F9).
-- apple/container: multi-A / shared alias (F3), host-side DNS not required for container-to-container lookup (F2), kubeconfig by IP (F4), healthcheck/restart.
+- apple/container: egress allow-list (T8): done, commented on [discussion #719](https://github.com/apple/container/discussions/719#discussioncomment-19611430) (related [#1320](https://github.com/apple/container/issues/1320)); multi-A / shared alias (F3), host-side DNS not required for container-to-container lookup (F2), kubeconfig by IP (F4), healthcheck/restart.
 
 ## Not verified
 

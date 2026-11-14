@@ -30,7 +30,7 @@ Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [d
 3. Done: T8, an agent in its own container VM reaches the tools through the gateway and gets 401 on the admin API. Limit: no egress allow-list in `container`, so the agent could also call the backend directly (see `docs/FINDINGS.md`).
 4. Upstream issues. Filed: reShapr [#619](https://github.com/reshaprio/reshapr/issues/619) (`--engine apple`, done), [#621](https://github.com/reshaprio/reshapr/issues/621) (cluster keystore, done). Filed: reShapr [#628](https://github.com/reshaprio/reshapr/issues/628) (gateway discovery retry, open). Commented on apple/container [#1809](https://github.com/apple/container/issues/1809#issuecomment-6880244436) (sudo DNS dependency, shared aliases / multi-A answers). No new issue needed; a configurable host alias is not needed (`--engine apple` handles it). Minor, not filed: kubeconfig by IP, healthcheck/restart. Follow #628 and #1809.
 5. Done: egress allow-list gap (T8) reported as a comment on [apple/container discussion #719](https://github.com/apple/container/discussions/719#discussioncomment-19611430); related [#1320](https://github.com/apple/container/issues/1320). No new issue filed (the topic exists). Follow the maintainers' reply; they want use cases and UX rather than a `pfctl`-based command.
-6. Docs on reshapr.io and a recipe in `reshapr-agent-skills`.
+6. Docs on reshapr.io: issue [#86](https://github.com/reshaprio/reshapr.io/issues/86) and PR [#87](https://github.com/reshaprio/reshapr.io/pull/87) (apple/container local development guide), open. Follow the review.
 
 ## Prerequisites
 

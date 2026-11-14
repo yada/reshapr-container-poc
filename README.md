@@ -36,6 +36,8 @@ Validated on macOS 27.2 (arm64), `container` 1.7.1, reShapr 1.1.0 (details in [d
 
 Apple silicon, macOS 26+, `container` 1.7+ (`container system start`), the reShapr CLI (`npm i -g @reshapr/reshapr-cli`), `curl`. No sudo is needed for anything here. Optional, with sudo: `container system dns create test` adds `<name>.test` resolution, and `dns create host.container.internal --localhost <ip>` lets containers reach host services (its rule is lost on reboot).
 
+Note: `reshapr run --engine apple` (T9) is not in a release yet. 1.1.1 lacks it ([#620](https://github.com/reshaprio/reshapr/pull/620) was merged on 2026-11-12, after the 1.1.1 release); until the next release, build the CLI from `main`. The `make up` stack does not need it and is validated on the 1.1.0 images.
+
 ## Quick start
 
 ```bash
